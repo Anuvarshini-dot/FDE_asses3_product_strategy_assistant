@@ -12,6 +12,7 @@ export default function App() {
   const [analyzing, setAnalyzing] = useState(false)
   const [results, setResults] = useState(null)
   const [docs, setDocs] = useState([])
+  const [selectedDocs, setSelectedDocs] = useState(new Set())
 
   async function refreshDocs() {
     try {
@@ -19,10 +20,20 @@ export default function App() {
       if (r.ok) {
         const data = await r.json()
         setDocs(data.documents)
+        setSelectedDocs(new Set(data.documents.map((_, i) => i)))
       }
     } catch {
       // backend may not be ready yet
     }
+  }
+
+  function toggleDoc(idx) {
+    setSelectedDocs(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
   }
 
   useEffect(() => {
@@ -33,7 +44,11 @@ export default function App() {
     setAnalyzing(true)
     setStatus('Running 5 AI agents...')
     try {
-      const res = await fetch(BACKEND + '/analyze', { method: 'POST' })
+      const res = await fetch(BACKEND + '/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_indices: [...selectedDocs] }),
+      })
       if (res.ok) {
         const data = await fetch(BACKEND + '/results')
         const json = await data.json()
@@ -77,7 +92,14 @@ export default function App() {
               <p className="no-docs">No documents uploaded yet</p>
             ) : (
               docs.map((name, i) => (
-                <span key={i} className="doc-item" title={name}>{name}</span>
+                <label key={i} className="doc-item" title={name} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedDocs.has(i)}
+                    onChange={() => toggleDoc(i)}
+                  />
+                  <span>{name}</span>
+                </label>
               ))
             )}
           </div>
@@ -86,7 +108,7 @@ export default function App() {
             <button
               className="btn-primary"
               onClick={runAnalysis}
-              disabled={analyzing || docs.length === 0}
+              disabled={analyzing || selectedDocs.size === 0}
             >
               {analyzing ? 'Analyzing...' : 'Run Analysis'}
             </button>
