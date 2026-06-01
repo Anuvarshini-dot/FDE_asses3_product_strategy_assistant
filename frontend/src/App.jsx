@@ -4,7 +4,7 @@ import Results from './components/Results'
 import Chat from './components/Chat'
 import Report from './components/Report'
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || ''
 
 export default function App() {
   const [tab, setTab] = useState('results')
