@@ -39,7 +39,7 @@ class ChatRequest(BaseModel):
     history: list = []
 
 
-@app.get("/")
+@app.get("/health")
 def root():
     return {"status": "ok", "service": "Product Strategy Assistant"}
 
