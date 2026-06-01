@@ -1,9 +1,10 @@
+import asyncio
 import io
 import os
 from typing import List
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +40,10 @@ class ChatRequest(BaseModel):
     history: list = []
 
 
+class AnalyzeRequest(BaseModel):
+    doc_indices: list = []
+
+
 @app.get("/health")
 def root():
     return {"status": "ok", "service": "Product Strategy Assistant"}
@@ -70,16 +75,27 @@ async def upload_documents(files: List[UploadFile] = File(...)):
 
 
 @app.post("/analyze")
-async def run_analysis():
+async def run_analysis(request: AnalyzeRequest = Body(default=AnalyzeRequest())):
     if not document_texts:
         raise HTTPException(status_code=400, detail="No documents uploaded. Please upload documents first.")
 
-    combined = "\n\n---\n\n".join(document_texts)
-    workflow = build_workflow()
-    result = workflow.invoke({"documents": combined})
-    analysis_results.clear()
-    analysis_results.update(result)
-    return {"status": "complete", "sections": [k for k in result if k != "documents"]}
+    if request.doc_indices:
+        texts = [document_texts[i] for i in request.doc_indices if 0 <= i < len(document_texts)]
+    else:
+        texts = document_texts[:]
+
+    if not texts:
+        raise HTTPException(status_code=400, detail="Selected documents not found. Please re-upload.")
+
+    try:
+        combined = "\n\n---\n\n".join(texts)
+        workflow = build_workflow()
+        result = await asyncio.to_thread(workflow.invoke, {"documents": combined})
+        analysis_results.clear()
+        analysis_results.update(result)
+        return {"status": "complete", "sections": [k for k in result if k != "documents"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/results")
@@ -103,16 +119,16 @@ async def chat(request: ChatRequest):
             context_parts.append(f"Executive Summary:\n{summary}")
 
     context = "\n\n".join(context_parts)
-    reply = run_chat(request.message, request.history, context)
+    reply = await asyncio.to_thread(run_chat, request.message, request.history, context)
     return {"response": reply}
 
 
 @app.get("/report/pdf")
-def download_pdf():
+async def download_pdf():
     if not analysis_results:
         raise HTTPException(status_code=404, detail="No analysis results yet. Run /analyze first.")
 
-    pdf_bytes = generate_pdf(analysis_results)
+    pdf_bytes = await asyncio.to_thread(generate_pdf, dict(analysis_results))
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",

@@ -18,8 +18,12 @@ export default function Report({ backend }) {
     try {
       const response = await fetch(backend + '/report/pdf')
       if (!response.ok) {
-        const json = await response.json()
-        setError(json.error || json.detail || 'Failed to generate PDF')
+        let errorMsg = 'Failed to generate PDF'
+        try {
+          const json = await response.json()
+          errorMsg = json.error || json.detail || errorMsg
+        } catch {}
+        setError(errorMsg)
         setLoading(false)
         return
       }
