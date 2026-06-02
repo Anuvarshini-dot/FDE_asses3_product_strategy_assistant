@@ -12,15 +12,13 @@ Multi-agent AI system that analyzes business documents and generates strategic p
 
 ## 3. Architecture Diagram
 
-![Architecture Diagram](architecture.png)
-
-> Add your architecture image file as `architecture.png` in the repo root, then commit it.
+![Architecture Diagram](architecture.svg)
 
 ## 4. Sample Generated Report (PDF)
 
 A sample AI-generated strategy report is available in the repository:
 
-[Download Sample Report](samples/sample_report.pdf)
+[Download Sample Report](<product_strategy_report (2).pdf>)
 
 > To generate your own: upload a document, run the analysis, and click **Download PDF Report** in the app.
 
